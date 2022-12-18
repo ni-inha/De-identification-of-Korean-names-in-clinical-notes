@@ -57,9 +57,11 @@ def job(FILE_NAME):
     if FILE_NAME[-4:] != ".csv":
         print(f"입력한 {FILE_NAME} 파일의 형식이 \".csv\"가 아닙니다!!")
         exit(1)
-
+    
+    encoding_input = input("선택한 파일의 인코딩 방식을 [cp949 / euc-kr / utf-8] 중에서 입력해주세요.\n인코딩 방식:")
+    
     pd.set_option('mode.chained_assignment',  None)
-    df = pd.read_csv(FILE_NAME).fillna(0)
+    df = pd.read_csv(FILE_NAME, encoding=encoding_input).fillna(0)
 
     print("\ncsv 파일에서 freetext가 담긴 열을 대소문자를 구분하여 입력해주세요.")
     print(f"입력하지 않고, 엔터를 누르면 \"{FREETEXT_COL}\"가 사용됩니다.")
