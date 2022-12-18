@@ -80,7 +80,9 @@ def job(FILE_NAME):
             str(df[DEIDENTIFIED_COL][i]), anonymization_pattern)
 
     current = current_string()
-    EXPORT_FILE_NAME = current+"_"+FILE_NAME[:-4]+"_de-identified"+FILE_NAME[-4:]
+    PATH, FILE = os.path.split(FILE_NAME)
+    EXPORT_FILE_NAME = f"{PATH}/{current}_{FILE[:-4]}_de-identified{FILE[-4:]}"
+
     df.to_csv(EXPORT_FILE_NAME, index=False, mode='w')
     print(f"익명화 작업이 완료되어 \"{EXPORT_FILE_NAME}\"으로 저장하였습니다.")
 
