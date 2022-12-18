@@ -3,44 +3,32 @@
 import os.path
 import pandas as pd
 import re
+from datetime import datetime, timedelta
 
 anonymization_pattern = {}
 
-# 의사OOO, 의사OO, 의사 OOO, 의사 OO, 의사.OOO
-anonymization_pattern["의사\.?\s?\(?\s?[가-힣]+\s?\)?"] = "의사"
+anonymization_pattern["의사\.?\s?\(?\s?[가-힣]+\s?\)?"] = "의사" # 의사OOO, 의사OO, 의사 OOO, 의사 OO, 의사.OOO
 anonymization_pattern["간호사\.?\s?\(?\s?[가-힣]+\s?\)?"] = "간호사"
 anonymization_pattern["간호\s?조무사\.?\s?\(?\s?[가-힣]+\s?\)?"] = "간호조무사"
-
-# prof.ooo, pro.ooo, Prof.ooo, Pro.ooo
-anonymization_pattern["[Pp][Rr][Oo][Ff]\.?\s?\(?\s?[가-힣]+\s?\)?"] = "의사"
-# pf.ooo, Pf.ooo
-anonymization_pattern["[Pp][Ff]\.?\s?\(?\s?[가-힣]+\s?\)?"] = "의사"
-# dr.ooo, Dr. ooo
-anonymization_pattern["[Dd][Rr]\.?\s?\(?\s?[가-힣]+\s?\)?"] = "의사"
-# R1 ooo 또는 r1 OOO, R2 ooo 또는 r2 OOO, R3 ooo 또는 r3 OOO, R4OOO
-anonymization_pattern["[Rr][1-4]\.?\s?\(?\s?[가-힣]+\s?\)?"] = "의사"
-# d.i.OOO, di.OOO, D.I.OOO, Di.OOO
-anonymization_pattern["[Dd]\.?[Ii]\.?\s?\(?\s?[가-힣]+\s?\)?"] = "의사"
+anonymization_pattern["[Pp][Rr][Oo][Ff]\.?\s?\(?\s?[가-힣]+\s?\)?"] = "의사" # prof.ooo, pro.ooo, Prof.ooo, Pro.ooo
+anonymization_pattern["[Pp][Ff]\.?\s?\(?\s?[가-힣]+\s?\)?"] = "의사" # pf.ooo, Pf.ooo
+anonymization_pattern["[Dd][Rr]\.?\s?\(?\s?[가-힣]+\s?\)?"] = "의사" # dr.ooo, Dr. ooo
+anonymization_pattern["[Rr][1-4]\.?\s?\(?\s?[가-힣]+\s?\)?"] = "의사" # R1 ooo 또는 r1 OOO, R2 ooo 또는 r2 OOO, R3 ooo 또는 r3 OOO, R4OOO
+anonymization_pattern["[Dd]\.?[Ii]\.?\s?\(?\s?[가-힣]+\s?\)?"] = "의사" # d.i.OOO, di.OOO, D.I.OOO, Di.OOO
 anonymization_pattern["[Pp][Ff]\.?\s?\(?\s?[가-힣]+\s?\)?"] = "의사"  # pf.(OOO)
 anonymization_pattern["[Dd]1\.?\s?\(?\s?[가-힣]+\s?\)?"] = "의사"  # D1 OOO
-# int OOO,  int. OOO
-anonymization_pattern["[Ii][Nn][Tt]\.?\s?\(?\s?[가-힣]+\s?\)?"] = "간호사"
+anonymization_pattern["[Ii][Nn][Tt]\.?\s?\(?\s?[가-힣]+\s?\)?"] = "간호사" # int OOO,  int. OOO
 anonymization_pattern["[Pp][Aa]\.?\s?\(?\s?[가-힣]+\s?\)?"] = "간호사"  # PA OOO
 anonymization_pattern["[Nn][Aa]\.?\s?\(?\s?[가-힣]+\s?\)?"] = "간호조무사"  # NA OOO
-
 anonymization_pattern["[가-힣]+\s?교수님"] = "의사"  # OOO 교수님
 anonymization_pattern["주치의\.?\s?\(?\s?[가-힣]+\s?\)?"] = "의사"  # 주치의 홍길동, 주치의 OO
-# 당직의 OOO, 당직의사 OOO, 당직의 OO
-anonymization_pattern["당직의사?\.?\s?\(?\s?[가-힣]+\s?\)?"] = "의사"
+anonymization_pattern["당직의사?\.?\s?\(?\s?[가-힣]+\s?\)?"] = "의사" # 당직의 OOO, 당직의사 OOO, 당직의 OO
 anonymization_pattern["인턴\.?\s?\(?\s?[가-힣]+\s?\)?"] = "의사"  # 인턴 OOO, 인턴 OO
 anonymization_pattern["전문의\.?\s?\(?\s?[가-힣]+\s?\)?"] = "의사"
 anonymization_pattern["인턴의\.?\s?\(?\s?[가-힣]+\s?\)?"] = "의사"
 anonymization_pattern["담당의\.?\s?\(?\s?[가-힣]+\s?\)?"] = "의사"
-# 당직 인턴의 OOO, 당직인턴의 OOO
-anonymization_pattern["당직\s?인턴의\.?\s?\(?\s?[가-힣]+\s?\)?"] = "의사"
-
-# 전담 간호사 OOO, 전담간호사OOO
-anonymization_pattern["전담\s?간호사\.?\s?\(?\s?[가-힣]+\s?\)?"] = "간호사"
+anonymization_pattern["당직\s?인턴의\.?\s?\(?\s?[가-힣]+\s?\)?"] = "의사" # 당직 인턴의 OOO, 당직인턴의 OOO
+anonymization_pattern["전담\s?간호사\.?\s?\(?\s?[가-힣]+\s?\)?"] = "간호사" # 전담 간호사 OOO, 전담간호사OOO
 anonymization_pattern["보조원\.?\s?\(?\s?[가-힣]+\s?\)?"] = "간호사"  # 보조원 OOO, 보조원OOO
 
 
@@ -50,6 +38,17 @@ def data_anonymization(input_str, anonymization_pattern):
 
     return input_str
 
+def current_string():
+    now = datetime.now()
+
+    def convert_kst(utc_string):
+        dt_tm_utc = datetime.strptime(utc_string,'%Y-%m-%d-%H%M%S') # datetime 값으로 변환
+        tm_kst = dt_tm_utc + timedelta(hours=9) # +9 시간
+        str_datetime = tm_kst.strftime('%Y-%m-%d-%H%M%S') # 일자 + 시간 문자열로 변환
+        return str_datetime
+
+    return now.strftime('%Y-%m-%d-%H%M%S')
+    # return convert_kst(now.strftime('%Y-%m-%d-%H%M%S')) # 한국 시간이 적용되지 않을 경우, 바로 윗 코드 대신 사용
 
 def job(FILE_NAME):
     FREETEXT_COL = "emr_NSGREC"
@@ -80,7 +79,8 @@ def job(FILE_NAME):
         df[DEIDENTIFIED_COL][i] = data_anonymization(
             str(df[DEIDENTIFIED_COL][i]), anonymization_pattern)
 
-    EXPORT_FILE_NAME = FILE_NAME[:-4]+"_de-identified"+FILE_NAME[-4:]
+    current = current_string()
+    EXPORT_FILE_NAME = current+"_"+FILE_NAME[:-4]+"_de-identified"+FILE_NAME[-4:]
     df.to_csv(EXPORT_FILE_NAME, index=False, mode='w')
     print(f"익명화 작업이 완료되어 \"{EXPORT_FILE_NAME}\"으로 저장하였습니다.")
 
